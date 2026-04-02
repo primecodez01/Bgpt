@@ -8,7 +8,7 @@ components, and validate syntax.
 import re
 import shlex
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Tuple
 
 from ..utils.logger import get_logger
 
@@ -49,20 +49,42 @@ class CommandParser:
     
     # Network operation patterns
     NETWORK_PATTERNS = {
-        r'curl\s+', r'wget\s+', r'ssh\s+', r'scp\s+', r'rsync\s+.*@',
-        r'nc\s+', r'netcat\s+', r'telnet\s+', r'ftp\s+', r'sftp\s+'
+        r'\bcurl\b': 'curl',
+        r'\bwget\b': 'wget',
+        r'\bssh\b': 'ssh',
+        r'\bscp\b': 'scp',
+        r'\brsync\b': 'rsync',
+        r'\bnc\b': 'nc',
+        r'\bnetcat\b': 'netcat',
+        r'\btelnet\b': 'telnet',
+        r'\bftp\b': 'ftp',
+        r'\bsftp\b': 'sftp',
     }
     
     # System modification patterns
     SYSTEM_PATTERNS = {
-        r'systemctl\s+', r'service\s+', r'mount\s+', r'umount\s+',
-        r'modprobe\s+', r'insmod\s+', r'rmmod\s+', r'iptables\s+'
+        r'\bsystemctl\b': 'systemctl',
+        r'\bservice\b': 'service',
+        r'\bmount\b': 'mount',
+        r'\bumount\b': 'umount',
+        r'\bmodprobe\b': 'modprobe',
+        r'\binsmod\b': 'insmod',
+        r'\brmmod\b': 'rmmod',
+        r'\biptables\b': 'iptables',
     }
     
     # File operation patterns
     FILE_PATTERNS = {
-        r'cp\s+', r'mv\s+', r'rm\s+', r'mkdir\s+', r'rmdir\s+',
-        r'touch\s+', r'ln\s+', r'tar\s+', r'zip\s+', r'unzip\s+'
+        r'\bcp\b': 'cp',
+        r'\bmv\b': 'mv',
+        r'\brm\b': 'rm',
+        r'\bmkdir\b': 'mkdir',
+        r'\brmdir\b': 'rmdir',
+        r'\btouch\b': 'touch',
+        r'\bln\b': 'ln',
+        r'\btar\b': 'tar',
+        r'\bzip\b': 'zip',
+        r'\bunzip\b': 'unzip',
     }
     
     def __init__(self) -> None:
@@ -70,51 +92,67 @@ class CommandParser:
         
     def parse(self, command: str) -> ParsedCommand:
         """Parse a shell command into its components."""
+        original_command = command.strip()
+
         try:
-            # Clean and normalize command
-            command = command.strip()
-            
-            # Check for sudo
-            uses_sudo = command.startswith('sudo ')
-            if uses_sudo:
-                command = command[5:].strip()
-            
-            # Extract environment variables
-            env_vars = self._extract_env_vars(command)
-            
             # Check for background execution
-            background = command.endswith(' &')
-            if background:
-                command = command[:-2].strip()
-            
-            # Extract pipes
-            pipes = self._extract_pipes(command)
-            
-            # Extract redirections
-            redirections = self._extract_redirections(command)
-            
-            # Parse main command
-            parts = shlex.split(command.split('|')[0].split('>')[0].split('<')[0])
-            if not parts:
+            background = bool(re.search(r'\s*&\s*$', original_command))
+            working_command = re.sub(r'\s*&\s*$', '', original_command).strip()
+
+            # Tokenize for structured parsing
+            tokens = shlex.split(working_command)
+            if not tokens:
                 raise ValueError("Empty command")
-                
-            base_command = parts[0]
-            arguments = []
-            flags = []
-            
-            for part in parts[1:]:
+
+            # Extract leading environment variable assignments
+            env_vars: Dict[str, str] = {}
+            token_index = 0
+            while token_index < len(tokens):
+                token = tokens[token_index]
+                if re.match(r'^[A-Za-z_][A-Za-z0-9_]*=.*$', token):
+                    key, value = token.split('=', 1)
+                    env_vars[key] = value
+                    token_index += 1
+                    continue
+                break
+
+            command_tokens = tokens[token_index:]
+            if not command_tokens:
+                raise ValueError("Missing command after environment variable assignment")
+
+            uses_sudo = command_tokens[0] == 'sudo'
+            if uses_sudo:
+                command_tokens = command_tokens[1:]
+            if not command_tokens:
+                raise ValueError("Missing command after sudo")
+
+            # Parse command components
+            base_command = command_tokens[0]
+            arguments: List[str] = []
+            flags: List[str] = []
+
+            for part in command_tokens[1:]:
                 if part.startswith('-'):
                     flags.append(part)
                 else:
                     arguments.append(part)
-            
-            # Analyze command types
-            file_ops = self._analyze_file_operations(command)
-            network_ops = self._analyze_network_operations(command)
-            system_ops = self._analyze_system_operations(command)
-            
+
+            # Extract pipes/redirections from working command
+            pipes = self._extract_pipes(working_command)
+            redirections = self._extract_redirections(working_command)
+
+            # Analyze command categories
+            file_ops = self._analyze_file_operations(working_command)
+            network_ops = self._analyze_network_operations(working_command)
+            system_ops = self._analyze_system_operations(working_command)
+
+            if background:
+                raw_command = f"{working_command} &"
+            else:
+                raw_command = working_command
+
             return ParsedCommand(
-                raw_command=f"{'sudo ' if uses_sudo else ''}{command}{'&' if background else ''}",
+                raw_command=raw_command,
                 base_command=base_command,
                 arguments=arguments,
                 flags=flags,
@@ -127,20 +165,20 @@ class CommandParser:
                 network_operations=network_ops,
                 system_operations=system_ops
             )
-            
+
         except Exception as e:
-            self.logger.error(f"Failed to parse command '{command}': {e}")
+            self.logger.error(f"Failed to parse command '{original_command}': {e}")
             # Return minimal parsed command
             return ParsedCommand(
-                raw_command=command,
-                base_command=command.split()[0] if command.split() else '',
+                raw_command=original_command,
+                base_command=original_command.split()[0] if original_command.split() else '',
                 arguments=[],
                 flags=[],
                 redirections=[],
                 pipes=[],
                 environment_vars={},
                 background=False,
-                uses_sudo=command.startswith('sudo '),
+                uses_sudo=original_command.startswith('sudo '),
                 file_operations=[],
                 network_operations=[],
                 system_operations=[]
@@ -162,52 +200,47 @@ class CommandParser:
     def _extract_pipes(self, command: str) -> List[str]:
         """Extract pipe operations."""
         if '|' in command:
-            return [part.strip() for part in command.split('|')[1:]]
+            # Ignore logical OR operator (||) when splitting pipelines.
+            parts = [part.strip() for part in re.split(r'(?<!\|)\|(?!\|)', command)]
+            return parts[1:] if len(parts) > 1 else []
         return []
     
     def _extract_redirections(self, command: str) -> List[Tuple[str, str]]:
         """Extract redirection operations."""
         redirections = []
-        
-        # Output redirections
-        for match in re.finditer(r'(\d*>>\?|\d*>)', command):
-            redir_type = match.group(1)
-            start = match.end()
-            # Find the target (next word)
-            remaining = command[start:].strip()
-            if remaining:
-                target = remaining.split()[0]
-                redirections.append((redir_type, target))
-        
+
+        # Output redirections (ordered from most specific to least specific).
+        for match in re.finditer(r'(?P<op>\d?>>|>>|\d?>|>)\s*(?P<target>\S+)', command):
+            redirections.append((match.group('op'), match.group('target')))
+
         # Input redirections
-        for match in re.finditer(r'<\s*(\S+)', command):
-            target = match.group(1)
-            redirections.append(('<', target))
-            
+        for match in re.finditer(r'(?P<op><<|<)\s*(?P<target>\S+)', command):
+            redirections.append((match.group('op'), match.group('target')))
+
         return redirections
     
     def _analyze_file_operations(self, command: str) -> List[str]:
         """Analyze file operations in command."""
         operations = []
-        for pattern in self.FILE_PATTERNS:
-            if re.search(pattern, command):
-                operations.append(pattern.replace(r'\s+', '').replace(r'\+', ''))
+        for pattern, operation_name in self.FILE_PATTERNS.items():
+            if re.search(pattern, command, re.IGNORECASE):
+                operations.append(operation_name)
         return operations
     
     def _analyze_network_operations(self, command: str) -> List[str]:
         """Analyze network operations in command."""
         operations = []
-        for pattern in self.NETWORK_PATTERNS:
-            if re.search(pattern, command):
-                operations.append(pattern.replace(r'\s+', '').replace(r'\+', ''))
+        for pattern, operation_name in self.NETWORK_PATTERNS.items():
+            if re.search(pattern, command, re.IGNORECASE):
+                operations.append(operation_name)
         return operations
     
     def _analyze_system_operations(self, command: str) -> List[str]:
         """Analyze system operations in command."""
         operations = []
-        for pattern in self.SYSTEM_PATTERNS:
-            if re.search(pattern, command):
-                operations.append(pattern.replace(r'\s+', '').replace(r'\+', ''))
+        for pattern, operation_name in self.SYSTEM_PATTERNS.items():
+            if re.search(pattern, command, re.IGNORECASE):
+                operations.append(operation_name)
         return operations
     
     def is_destructive(self, command: str) -> Tuple[bool, List[str]]:
@@ -237,12 +270,16 @@ class CommandParser:
             errors.append("Unmatched single quotes")
         
         # Check for dangerous combinations
-        if 'rm' in command and '-rf' in command and ('*' in command or '/' in command):
-            errors.append("Potentially dangerous rm command with wildcards")
+        if (
+            re.search(r'\brm\b', command)
+            and re.search(r'\-[^\s]*r[^\s]*f|\-[^\s]*f[^\s]*r', command)
+            and ("*" in command or re.search(r'\s/($|\s|\w)', command))
+        ):
+            errors.append("Potentially dangerous rm command with recursive force flags")
         
         return len(errors) == 0, errors
     
-    def get_command_info(self, parsed_command: ParsedCommand) -> Dict[str, any]:
+    def get_command_info(self, parsed_command: ParsedCommand) -> Dict[str, Any]:
         """Get comprehensive information about a parsed command."""
         return {
             'base_command': parsed_command.base_command,

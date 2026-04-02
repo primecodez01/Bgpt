@@ -13,12 +13,13 @@ _logger: Optional[logging.Logger] = None
 def setup_logger(name: str = "bgpt", level: str = "INFO") -> logging.Logger:
     """Setup main logger."""
     global _logger
-    
+
     if _logger is not None:
         return _logger
-        
+
     logger = logging.getLogger(name)
-    logger.setLevel(getattr(logging, level.upper()))
+    logger.setLevel(getattr(logging, level.upper(), logging.INFO))
+    logger.propagate = False
     
     if not logger.handlers:
         # Remove console handler entirely - no console logging
@@ -39,7 +40,7 @@ def setup_logger(name: str = "bgpt", level: str = "INFO") -> logging.Logger:
             # If file logging fails, create a null handler
             null_handler = logging.NullHandler()
             logger.addHandler(null_handler)
-    
+
     _logger = logger
     return logger
 

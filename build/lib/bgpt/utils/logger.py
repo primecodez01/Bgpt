@@ -13,24 +13,19 @@ _logger: Optional[logging.Logger] = None
 def setup_logger(name: str = "bgpt", level: str = "INFO") -> logging.Logger:
     """Setup main logger."""
     global _logger
-    
+
     if _logger is not None:
         return _logger
-        
+
     logger = logging.getLogger(name)
-    logger.setLevel(getattr(logging, level.upper()))
+    logger.setLevel(getattr(logging, level.upper(), logging.INFO))
+    logger.propagate = False
     
     if not logger.handlers:
-        # Console handler
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.WARNING)  # Only show warnings and errors on console
-        console_formatter = logging.Formatter(
-            '%(name)s - %(levelname)s - %(message)s'
-        )
-        console_handler.setFormatter(console_formatter)
-        logger.addHandler(console_handler)
+        # Remove console handler entirely - no console logging
+        # All logging goes to file only
         
-        # File handler
+        # File handler only
         try:
             log_dir = Path.home() / ".bgpt" / "logs"
             log_dir.mkdir(parents=True, exist_ok=True)
@@ -42,9 +37,10 @@ def setup_logger(name: str = "bgpt", level: str = "INFO") -> logging.Logger:
             file_handler.setFormatter(file_formatter)
             logger.addHandler(file_handler)
         except Exception:
-            # If file logging fails, continue without it
-            pass
-    
+            # If file logging fails, create a null handler
+            null_handler = logging.NullHandler()
+            logger.addHandler(null_handler)
+
     _logger = logger
     return logger
 
