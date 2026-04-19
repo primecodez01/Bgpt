@@ -1,187 +1,278 @@
-# 🚀 Bgpt - Advanced AI Shell Command Assistant
+# Bgpt
 
-Transform natural language into powerful shell commands with enterprise-grade AI assistance.
+Bgpt is a customizable AI-powered shell assistant. It converts natural-language requests into shell commands, applies safety checks, and executes commands with confirmation and timeout controls.
 
-## ✨ Features
+## What You Get
 
-- **Multi-Provider AI**: Supports Gemini, OpenAI, Claude, and local models
-- **Smart Safety**: Advanced command validation and safety checks
-- **Rich Interface**: Beautiful terminal UI with syntax highlighting
-- **Command History**: Searchable history with learning capabilities
-- **Plugin System**: Extensible architecture for specialized commands
-- **Secure Config**: Encrypted credential storage
+- Multi-provider AI: `gemini`, `openai`, `anthropic`, `local` (Ollama)
+- Safety pipeline with risk scoring, blocking rules, warnings, and confirmation
+- Redesigned terminal UX with profile-based customization
+- Agentic decision mode (auto decides run vs confirm based on risk)
+- Interactive chat mode and one-shot mode
+- Command history with execution metadata
+- Setup wizard and diagnostics command
 
-## 📦 Installation
+## Installation
 
-### From PyPI (Recommended)
+### From source (recommended for this repository)
+
 ```bash
-pip install bgpt
-```
-
-### From Source
-```bash
-git clone https://github.com/bgpt/bgpt.git
-cd bgpt
+git clone https://github.com/primecodez01/Bgpt.git
+cd Bgpt
+python -m venv .venv
+source .venv/bin/activate
 pip install -e .
 ```
 
-## 🚀 Quick Start
+### Optional dependencies
 
-### 1. Setup
+If you need all providers and extras:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Quick Start
+
+### 1) Run setup wizard
+
 ```bash
 bgpt --setup
 ```
 
-### 2. Basic Usage
-```bash
-# One-shot command generation
-bgpt "find all python files larger than 1MB"
+### 2) Ask in one-shot mode
 
-# Interactive chat mode
+```bash
+bgpt "find all python files larger than 50MB"
+```
+
+### 3) Enter chat mode
+
+```bash
 bgpt --chat
-
-# Explain existing commands
-bgpt --explain "ls -la | grep .py"
 ```
 
-### 3. Configuration
-```bash
-# Set AI provider
-bgpt config --provider gemini
-
-# Set theme
-bgpt config --theme dark
-
-# Set safety level
-bgpt config --safety-level high
-```
-
-## 💡 Usage Examples
-
-### Natural Language Commands
-```bash
-bgpt "show disk usage sorted by size"
-# Generated: du -sh * | sort -hr
-
-bgpt "find all log files modified in last 24 hours"
-# Generated: find /var/log -name "*.log" -mtime -1
-
-bgpt "compress all .txt files in current directory"
-# Generated: tar -czf text_files.tar.gz *.txt
-```
-
-### Git Operations
-```bash
-bgpt "create a new branch for user authentication feature"
-# Generated: git checkout -b feature/user-authentication
-
-bgpt "show files changed in last commit"
-# Generated: git diff --name-only HEAD~1
-```
-
-### System Administration
-```bash
-bgpt "check which processes are using most CPU"
-# Generated: ps aux --sort=-%cpu | head -10
-
-bgpt "find large files taking up space"
-# Generated: find / -type f -size +100M 2>/dev/null | head -20
-```
-
-## 🔧 Configuration
-
-### API Keys
-Set your AI provider API keys:
+### 4) Explain an existing command
 
 ```bash
-# Environment variables (recommended)
-export GEMINI_API_KEY="your-api-key"
-export OPENAI_API_KEY="your-api-key"
-
-# Or use the setup wizard
-bgpt --setup
+bgpt --explain "ls -la | grep py"
 ```
 
-### Config File
-Located at `~/.bgpt/config.json`:
+## Provider Setup
+
+Bgpt reads API keys from either:
+
+- Environment variables
+- System keyring (when saved by setup wizard)
+
+Supported environment variables:
+
+- `GEMINI_API_KEY`
+- `OPENAI_API_KEY`
+- `ANTHROPIC_API_KEY`
+
+Optional model overrides:
+
+- `BGPT_GEMINI_MODEL`
+- `BGPT_OPENAI_MODEL`
+- `BGPT_ANTHROPIC_MODEL`
+- `BGPT_LOCAL_MODEL`
+
+Preferred workflow: use `bgpt --setup` to pick provider + model and persist it in config.
+
+## Terminal Redesign And Full Customization
+
+Bgpt now supports user-level terminal customization persisted in `~/.bgpt/config.json`.
+
+### Profiles
+
+- `default`
+- `sunset`
+- `matrix`
+- `midnight`
+- `minimal`
+
+### Prompt styles
+
+- `arrow` (default)
+- `classic`
+- `minimal`
+
+### UX toggles
+
+- Compact mode on/off
+- Timestamp display on/off
+- Tips on/off
+- Command preview lines (3-30)
+
+### Configure from CLI
+
+```bash
+bgpt config set --profile matrix --prompt-style classic
+bgpt config set --compact --timestamps --tips
+bgpt config set --preview-lines 20
+bgpt config set --timeout 120
+bgpt config set --provider openai --safety-level high
+bgpt config set --model-provider openai --model gpt-4o-mini
+bgpt config set --theme hacker
+bgpt config set --agentic --hide-details --agentic-risk low
+bgpt config show
+```
+
+### Configure live inside chat
+
+```text
+/profile matrix
+/style classic
+/theme hacker
+/compact on
+/timestamps off
+/tips off
+/preview 18
+/provider gemini
+/model gemini-2.5-flash
+/model openai gpt-4o-mini
+/agentic on
+/details off
+/agentic-risk low
+/safety medium
+/timeout 90
+/config
+```
+
+## Safety Model
+
+Before execution, Bgpt performs:
+
+1. Syntax validation
+2. Command parsing and operation classification
+3. Safety scoring (low/medium/high)
+4. Hard-block checks for dangerous patterns
+5. Confirmation flow for risky commands
+
+Commands can be blocked outright if they match critical destructive patterns.
+
+## Configuration Reference
+
+Config file path:
+
+```text
+~/.bgpt/config.json
+```
+
+Example:
 
 ```json
 {
   "provider": "gemini",
-  "theme": "default", 
+  "theme": "default",
   "safety_level": "medium",
   "auto_execute": false,
-  "save_history": true
+  "agentic_mode": false,
+  "show_command_details": true,
+  "agentic_auto_execute_max_risk": "low",
+  "save_history": true,
+  "command_timeout": 60,
+  "enabled_plugins": ["git", "mcp"],
+  "models": {
+    "gemini": "gemini-2.5-flash",
+    "openai": "gpt-4o-mini",
+    "anthropic": "claude-3-5-sonnet-latest",
+    "local": "tinyllama"
+  },
+  "ui": {
+    "profile": "default",
+    "prompt_style": "arrow",
+    "compact_mode": false,
+    "show_timestamps": true,
+    "show_tips": true,
+    "command_preview_lines": 12
+  }
 }
 ```
 
-## 🛡️ Safety Features
-
-- **Command Validation**: Multi-layer safety checks
-- **Destructive Command Detection**: Blocks dangerous operations
-- **User Confirmation**: Always asks before execution
-- **Sandbox Mode**: Isolated execution environment
-- **Audit Logging**: Complete command history
-
-## 🎨 Themes
-
-Choose from multiple UI themes:
-- `default` - Professional blue theme
-- `dark` - Dark mode with accent colors  
-- `light` - Clean light theme
-- `hacker` - Matrix-style green on black
-- `minimal` - Clean monochrome design
-
-## 🔌 Plugin System
-
-Bgpt supports plugins for specialized operations:
+## Common Commands
 
 ```bash
-# List available plugins
-bgpt plugins --list
+# Chat mode
+bgpt --chat
 
-# Enable git plugin
-bgpt plugins --enable git
+# One-shot generation and execution flow
+bgpt "show top 10 processes by memory"
 
-# Use git-specific commands
-bgpt git "create feature branch for API integration"
-```
+# Diagnostics
+bgpt --doctor
 
-## 📊 Command History
-
-```bash
-# View recent commands
+# Show history
 bgpt --history
 
-# Search history
-bgpt history --search "docker"
-
-# Export history
-bgpt --export history.json
+# Setup local Ollama model
+bgpt setup-local
 ```
 
-## 🐳 Docker Support
+## Plugin Commands
 
-Run Bgpt in a container:
+Current plugin registry includes:
+
+- `git`
+- `docker`
+- `system`
+- `mcp`
+
+Manage plugins:
 
 ```bash
-docker run -it bgpt/bgpt
+bgpt plugins list
+bgpt plugins install git
+bgpt plugins enable git
+bgpt plugins disable git
+bgpt plugins uninstall git
 ```
 
-## 🤝 Contributing
+## Local Provider (Ollama)
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+To prepare local/offline usage:
 
-## 📝 License
+```bash
+bgpt setup-local
+```
 
-MIT License - see [LICENSE](LICENSE) for details.
+This checks Ollama availability and attempts to set up a lightweight model.
 
-## 🆘 Support
+## Troubleshooting
 
-- 📖 [Documentation](https://bgpt.dev/docs)
-- 🐛 [Issue Tracker](https://github.com/bgpt/bgpt/issues)
-- 💬 [Discussions](https://github.com/bgpt/bgpt/discussions)
+### No command generated
 
----
+- Run `bgpt --doctor`
+- Verify API keys are configured
+- Switch provider: `bgpt config set --provider gemini`
 
-**Made with ❤️ by the Bgpt team**
+### Command times out
+
+- Increase timeout: `bgpt config set --timeout 180`
+
+### Provider initializes but returns nothing
+
+- Set explicit model override (`BGPT_*_MODEL`)
+- Try another provider
+
+### TUI mode unavailable
+
+- Install textual dependency:
+
+```bash
+pip install textual>=0.50.0
+```
+
+## Development
+
+Run editable install and checks:
+
+```bash
+pip install -e .
+python -m bgpt.main --help
+```
+
+## License
+
+MIT

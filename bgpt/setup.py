@@ -14,7 +14,7 @@ def get_requirements():
     return [
         "rich>=13.7.0",
         "click>=8.1.0",
-        "google-generativeai>=0.4.0",
+        "google-genai>=0.5.0",
         "keyring>=24.3.0",
         "cryptography>=41.0.0",
         "pydantic>=2.5.0",
@@ -75,7 +75,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "bgpt=bgpt.main:cli",  
+            "bgpt=bgpt.main:main",
             "bgpt-setup-local=bgpt.setup_local:main",  # Add setup command
         ],
     },
