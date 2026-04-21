@@ -25,7 +25,7 @@ def get_requirements():
     ]
 
 setup(
-    name="bgpt",
+    name="bgpt-primecodez",
     version="1.0.0",
     author="Nikhil Singh",
     author_email="singhnikhil03@outlook.com",

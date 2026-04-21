@@ -1,5 +1,7 @@
 # Bgpt
 
+Bgpt is an AI-powered terminal assistant that converts natural language into shell scripts, explains what each command does, and runs commands with built-in safety checks. It supports Gemini, OpenAI, Anthropic, and local Ollama models so developers, DevOps engineers, and power users can automate terminal workflows faster and more safely.
+
 Bgpt is a customizable AI-powered shell assistant. It converts natural-language requests into shell commands, applies safety checks, and executes commands with confirmation and timeout controls.
 
 ## What You Get
@@ -13,6 +15,18 @@ Bgpt is a customizable AI-powered shell assistant. It converts natural-language 
 - Setup wizard and diagnostics command
 
 ## Installation
+
+### From PyPI
+
+```bash
+pip install bgpt-primecodez
+```
+
+After installation, run the CLI with:
+
+```bash
+bgpt --help
+```
 
 ### From source (recommended for this repository)
 
@@ -272,6 +286,34 @@ Run editable install and checks:
 pip install -e .
 python -m bgpt.main --help
 ```
+
+## Suggested GitHub Topics
+
+- ai-cli
+- terminal-assistant
+- natural-language-to-shell
+- shell-automation
+- command-generation
+- devtools
+- productivity
+- llm-tools
+- agentic-cli
+- command-safety
+- python-cli
+- mcp
+- ollama
+- openai
+- anthropic
+- gemini
+
+## License Ideas
+
+- MIT (current): simple permissive license, best for fast adoption
+- Apache-2.0: permissive plus explicit patent grant
+- GPL-3.0: strong copyleft for derivative work
+- AGPL-3.0: copyleft including network/SaaS use
+
+Recommended default for this project: MIT or Apache-2.0.
 
 ## License
 

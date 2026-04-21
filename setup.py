@@ -25,14 +25,15 @@ def get_requirements():
     ]
 
 setup(
-    name="bgpt",
+    name="bgpt-primecodez",
     version="1.0.0",
     author="Nikhil Singh",
-    author_email="singhnikhil03@outlook.com",
+    companyname="Primecodez",
+    author_email="nikhil@primecodez.com",
     description="Advanced AI Shell Command Assistant",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
-    url="https://github.com/bgpt/bgpt",
+    url="https://github.com/primecodez01/bgpt",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 5 - Production/Stable",
